@@ -6,6 +6,8 @@ using System.Linq;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper;
+using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper.PerkSelection;
+using TaleWorlds.Core;
 
 namespace DoublePerksMod
 {
@@ -13,35 +15,109 @@ namespace DoublePerksMod
     public class PerkSelectionPatch
     {
         /// <summary>
-        /// Modifies perk selection behavior to automatically select an alternative perk if conditions are met.
-        /// Returns false to prevent the original method from executing.
+        /// Modifies perk selection behavior to allow manual selection of both main and alternative perks for the player.
+        /// Updates UI and applies perk effects immediately. Returns false to skip the original method.
         /// </summary>
-        /// <param name="__instance">The SkillVM instance handling perk selection.</param>
-        /// <param name="perk">The selected PerkVM object.</param>
-        /// <returns>False to skip the original method.</returns>
         private static bool Prefix(SkillVM __instance, PerkVM perk)
         {
-            if (perk.AlternativeType == 0 || perk.PerkState != 3)
-                return false;
+            // Проверяем, что перк выбран и имеет альтернативу
+            if (perk == null || perk.Perk == null || perk.PerkState != 3 || perk.AlternativeType == 0)
+                return true; // Пропускаем, если перк не выбран или нет альтернативы
 
-            var alternativePerk = __instance.Perks.SingleOrDefault(p => p.Perk == perk.Perk.AlternativePerk);
-            if (alternativePerk != null)
+            // Получаем героя (предполагаем, что это игрок)
+            Hero hero = GetHeroFromSkillVM(__instance);
+            if (hero == null || hero.HeroDeveloper == null)
+                return true; // Пропускаем, если герой не найден
+
+            // Ограничиваем функциональность только игроком
+            if (hero != Hero.MainHero)
+                return true; // Пропускаем для NPC, оставляем это для PerkPatch
+
+            Log($"Player selected perk: {perk.Perk.Name}");
+
+            try
             {
-                alternativePerk.PerkState = 3;
+                // Добавляем выбранный перк
+                if (!hero.GetPerkValue(perk.Perk))
+                {
+                    hero.HeroDeveloper.AddPerk(perk.Perk);
+                    Log($"Added perk: {perk.Perk.Name}");
+                    TriggerPerkEffects(hero, perk.Perk);
+                }
+
+                // Проверяем и добавляем альтернативный перк
+                PerkObject alternativePerkObject = perk.Perk.AlternativePerk;
+                if (alternativePerkObject != null)
+                {
+                    var alternativePerkVM = __instance.Perks.SingleOrDefault(p => p.Perk == alternativePerkObject);
+                    if (alternativePerkVM != null)
+                    {
+                        if (!hero.GetPerkValue(alternativePerkObject))
+                        {
+                            hero.HeroDeveloper.AddPerk(alternativePerkObject);
+                            Log($"Added alternative perk: {alternativePerkObject.Name}");
+                            TriggerPerkEffects(hero, alternativePerkObject);
+                        }
+                        alternativePerkVM.PerkState = 3; // Обновляем UI
+                    }
+                }
+
+                // Обновляем UI
+                __instance.OnPropertyChanged("Perks");
+                __instance.RefreshValues();
             }
-            return false;
+            catch (Exception ex)
+            {
+                Log($"Error processing perk selection: {ex.Message}");
+                return true; // Пропускаем оригинальный метод при ошибке
+            }
+
+            return false; // Пропускаем оригинальный метод
+        }
+
+        /// <summary>
+        /// Triggers perk effects immediately by firing campaign events.
+        /// </summary>
+        private static void TriggerPerkEffects(Hero hero, PerkObject perk)
+        {
+            if (hero == null || perk == null)
+                return;
+
+            CampaignEventDispatcher.Instance.OnHeroGainedSkill(hero, perk.Skill, 0, true);
+            Game.Current.EventManager.TriggerEvent(new PerkSelectedByPlayerEvent(perk));
+            Log($"Triggered effects for perk: {perk.Name}");
+        }
+
+        /// <summary>
+        /// Retrieves the Hero associated with the SkillVM instance.
+        /// </summary>
+        private static Hero GetHeroFromSkillVM(SkillVM skillVM)
+        {
+            var characterVM = (CharacterVM)typeof(SkillVM).GetField("_developerVM", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(skillVM);
+            return characterVM?.Hero ?? Hero.MainHero; // MainHero как запасной вариант
+        }
+
+        /// <summary>
+        /// Logs messages to a file on the desktop for debugging.
+        /// </summary>
+        private static void Log(string message)
+        {
+            try
+            {
+                string logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "DoublePerksMod_Log.txt");
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
+                File.AppendAllText(logFilePath, logEntry + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Logging failed: {ex.Message}");
+            }
         }
     }
 
     [HarmonyPatch(typeof(HeroDeveloper), "SelectPerks")]
     public static class PerkPatch
     {
-        /// <summary>
-        /// Overrides perk selection to grant heroes both main and alternative perks if eligible.
-        /// Logs the process and handles exceptions, returning false to skip the original method.
-        /// </summary>
-        /// <param name="__instance">The HeroDeveloper instance managing the hero's perks.</param>
-        /// <returns>False to prevent the original method from executing.</returns>
         public static bool Prefix(HeroDeveloper __instance)
         {
             Hero hero = __instance.Hero;
@@ -65,18 +141,20 @@ namespace DoublePerksMod
                     {
                         hero.HeroDeveloper.AddPerk(perk);
                         addedPerks.Add(perk);
-                        Log($"Added main perk: {perk.Name} for {hero.Name}");
+                        Log($"Added main perk: {perk.Name}");
+                        TriggerPerkEffects(hero, perk);
                     }
                     if (perk.AlternativePerk != null && !hero.GetPerkValue(perk.AlternativePerk) && !addedPerks.Contains(perk.AlternativePerk))
                     {
                         hero.HeroDeveloper.AddPerk(perk.AlternativePerk);
                         addedPerks.Add(perk.AlternativePerk);
-                        Log($"Added alternative perk: {perk.AlternativePerk.Name} for {hero.Name}");
+                        Log($"Added alternative perk: {perk.AlternativePerk.Name}");
+                        TriggerPerkEffects(hero, perk.AlternativePerk);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log($"Error adding perks for {hero.Name}: {ex.Message}");
+                    Log($"Error adding perks: {ex.Message}");
                 }
             }
 
@@ -84,10 +162,14 @@ namespace DoublePerksMod
             return false;
         }
 
-        /// <summary>
-        /// Writes a message with a timestamp to a log file on the desktop for debugging purposes.
-        /// </summary>
-        /// <param name="message">The message to log.</param>
+        private static void TriggerPerkEffects(Hero hero, PerkObject perk)
+        {
+            if (hero == null || perk == null) return;
+            CampaignEventDispatcher.Instance.OnHeroGainedSkill(hero, perk.Skill, 0, true);
+            Game.Current.EventManager.TriggerEvent(new PerkSelectedByPlayerEvent(perk));
+            Log($"Triggered effects for perk: {perk.Name}");
+        }
+
         private static void Log(string message)
         {
             try
@@ -106,10 +188,6 @@ namespace DoublePerksMod
     [HarmonyPatch(typeof(Campaign), "OnGameLoaded")]
     public static class GameLoadPatch
     {
-        /// <summary>
-        /// Checks and adds alternative perks for all alive heroes after the game loads.
-        /// Logs the process for debugging and verification.
-        /// </summary>
         public static void Postfix()
         {
             Log("Game loaded, checking perks for all heroes.");
@@ -123,7 +201,8 @@ namespace DoublePerksMod
                         if (perk.AlternativePerk != null && !hero.GetPerkValue(perk.AlternativePerk))
                         {
                             hero.HeroDeveloper.AddPerk(perk.AlternativePerk);
-                            Log($"Added alternative perk: {perk.AlternativePerk.Name} for {hero.Name} (existing perk)");
+                            Log($"Added alternative perk: {perk.AlternativePerk.Name} (existing perk)");
+                            TriggerPerkEffects(hero, perk.AlternativePerk);
                         }
                     }
                 }
@@ -131,10 +210,14 @@ namespace DoublePerksMod
             Log("Perk checking completed.");
         }
 
-        /// <summary>
-        /// Writes a message with a timestamp to a log file on the desktop for debugging purposes.
-        /// </summary>
-        /// <param name="message">The message to log.</param>
+        private static void TriggerPerkEffects(Hero hero, PerkObject perk)
+        {
+            if (hero == null || perk == null) return;
+            CampaignEventDispatcher.Instance.OnHeroGainedSkill(hero, perk.Skill, 0, true);
+            Game.Current.EventManager.TriggerEvent(new PerkSelectedByPlayerEvent(perk));
+            Log($"Triggered effects for perk: {perk.Name}");
+        }
+
         private static void Log(string message)
         {
             try

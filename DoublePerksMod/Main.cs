@@ -11,7 +11,7 @@ namespace DoublePerksMod
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
-            var harmony = new Harmony("com.yourname.doubleperksmod");
+            var harmony = new Harmony("com.geniussjack.doubleperksmod");
             harmony.PatchAll();
         }
     }
