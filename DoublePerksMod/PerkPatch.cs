@@ -20,24 +20,20 @@ namespace DoublePerksMod
         /// </summary>
         private static bool Prefix(SkillVM __instance, PerkVM perk)
         {
-            // Проверяем, что перк выбран и имеет альтернативу
             if (perk == null || perk.Perk == null || perk.PerkState != 3 || perk.AlternativeType == 0)
-                return true; // Пропускаем, если перк не выбран или нет альтернативы
+                return true;
 
-            // Получаем героя (предполагаем, что это игрок)
             Hero hero = GetHeroFromSkillVM(__instance);
             if (hero == null || hero.HeroDeveloper == null)
-                return true; // Пропускаем, если герой не найден
+                return true;
 
-            // Ограничиваем функциональность только игроком
             if (hero != Hero.MainHero)
-                return true; // Пропускаем для NPC, оставляем это для PerkPatch
+                return true;
 
             Log($"Player selected perk: {perk.Perk.Name}");
 
             try
             {
-                // Добавляем выбранный перк
                 if (!hero.GetPerkValue(perk.Perk))
                 {
                     hero.HeroDeveloper.AddPerk(perk.Perk);
@@ -45,7 +41,6 @@ namespace DoublePerksMod
                     TriggerPerkEffects(hero, perk.Perk);
                 }
 
-                // Проверяем и добавляем альтернативный перк
                 PerkObject alternativePerkObject = perk.Perk.AlternativePerk;
                 if (alternativePerkObject != null)
                 {
@@ -58,21 +53,20 @@ namespace DoublePerksMod
                             Log($"Added alternative perk: {alternativePerkObject.Name}");
                             TriggerPerkEffects(hero, alternativePerkObject);
                         }
-                        alternativePerkVM.PerkState = 3; // Обновляем UI
+                        alternativePerkVM.PerkState = 3;
                     }
                 }
 
-                // Обновляем UI
                 __instance.OnPropertyChanged("Perks");
                 __instance.RefreshValues();
             }
             catch (Exception ex)
             {
                 Log($"Error processing perk selection: {ex.Message}");
-                return true; // Пропускаем оригинальный метод при ошибке
+                return true;
             }
 
-            return false; // Пропускаем оригинальный метод
+            return false;
         }
 
         /// <summary>
@@ -94,7 +88,7 @@ namespace DoublePerksMod
         private static Hero GetHeroFromSkillVM(SkillVM skillVM)
         {
             var characterVM = (CharacterVM)typeof(SkillVM).GetField("_developerVM", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(skillVM);
-            return characterVM?.Hero ?? Hero.MainHero; // MainHero как запасной вариант
+            return characterVM?.Hero ?? Hero.MainHero;
         }
 
         /// <summary>
