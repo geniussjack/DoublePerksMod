@@ -76,8 +76,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
-    <Compile Include="PerkPatch.cs" />
+    <Compile Include="Patches\GameLoadPatch.cs" />
+    <Compile Include="Patches\PekPatch.cs" />
+    <Compile Include="Patches\PerkSelectionPatch.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings\DoublePerksSettings.cs" />
+    <Compile Include="Utilities\DoublePerksUtility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
