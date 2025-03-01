@@ -2,7 +2,7 @@
 using MCM.Abstractions.Base.Global;
 using MCM.Abstractions.Attributes.v1;
 
-namespace DoublePerksMod
+namespace DoublePerksMod.Settings
 {
     public class DoublePerksSettings : AttributeGlobalSettings<DoublePerksSettings>
     {
@@ -21,11 +21,11 @@ namespace DoublePerksMod
         public bool EnableForLords { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets whether companions can take both perks.
+        /// Gets or sets whether clan members can take both perks.
         /// </summary>
-        [SettingProperty("Enable for Companions", HintText = "Allow companions to take both perks.")]
+        [SettingProperty("Enable for Clan Members", HintText = "Allow player's clan members to take both perks.")]
         [SettingPropertyGroup("Double Perks Options")]
-        public bool EnableForCompanions { get; set; } = true;
+        public bool EnableForClanMembers { get; set; } = true;
 
         /// <summary>
         /// Gets or sets whether other characters can take both perks.

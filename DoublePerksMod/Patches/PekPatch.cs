@@ -1,13 +1,14 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Linq;
 using System.Collections.Generic;
-using HarmonyLib;
 using TaleWorlds.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper.PerkSelection;
+using DoublePerksMod.Utilities;
 
-namespace DoublePerksMod
+namespace DoublePerksMod.Patches
 {
     [HarmonyPatch(typeof(HeroDeveloper), "SelectPerks")]
     public static class PerkPatch

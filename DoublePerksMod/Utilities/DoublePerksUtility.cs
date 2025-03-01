@@ -1,6 +1,7 @@
 ﻿using TaleWorlds.CampaignSystem;
+using DoublePerksMod.Settings;
 
-namespace DoublePerksMod
+namespace DoublePerksMod.Utilities
 {
     public static class DoublePerksUtility
     {
@@ -15,7 +16,7 @@ namespace DoublePerksMod
                 return DoublePerksSettings.Instance.EnableForPlayer;
 
             if (hero.Clan == Clan.PlayerClan && hero != Hero.MainHero)
-                return DoublePerksSettings.Instance.EnableForCompanions;
+                return DoublePerksSettings.Instance.EnableForClanMembers;
 
             if (hero.Clan?.Leader == hero)
                 return DoublePerksSettings.Instance.EnableForRulers;

@@ -1,13 +1,14 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Linq;
-using HarmonyLib;
 using TaleWorlds.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper;
 using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper.PerkSelection;
+using DoublePerksMod.Settings;
 
-namespace DoublePerksMod
+namespace DoublePerksMod.Patches
 {
     [HarmonyPatch(typeof(SkillVM), "OnPerkSelectionOver")]
     public class PerkSelectionPatch

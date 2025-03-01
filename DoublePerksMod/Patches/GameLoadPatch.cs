@@ -4,8 +4,9 @@ using TaleWorlds.Core;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ViewModelCollection.CharacterDeveloper.PerkSelection;
+using DoublePerksMod.Utilities;
 
-namespace DoublePerksMod
+namespace DoublePerksMod.Patches
 {
     [HarmonyPatch(typeof(Campaign), "OnGameLoaded")]
     public static class GameLoadPatch
